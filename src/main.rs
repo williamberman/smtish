@@ -1,6 +1,6 @@
 use amzn_smt_ir::{
     logic::{ArithOp, ALL},
-    CoreOp, Term,
+    CoreOp, Term, ISort,
 };
 use smallvec::smallvec;
 
@@ -30,7 +30,7 @@ pub fn prob1() {
     ]);
 
     let s = solver::Solution::try_new(
-        &vec![x.clone(), y.clone()],
+        &vec![(x.clone(), ISort::int()), (y.clone(), ISort::int())],
         &vec![c1.into(), c2.into(), c3.into()],
     )
     .unwrap();
@@ -46,7 +46,7 @@ pub fn unsat_prob() {
     let c1 = ArithOp::Gt(smallvec![x.clone(), y.clone()]);
     let c2 = ArithOp::Lt(smallvec![x.clone(), y.clone()]);
 
-    let s = solver::Solution::try_new(&vec![x, y], &vec![c1.into(), c2.into()]).unwrap_err();
+    let s = solver::Solution::try_new(&vec![(x, ISort::int()), (y, ISort::int())], &vec![c1.into(), c2.into()]).unwrap_err();
 
     println!("{:?}", s);
 }

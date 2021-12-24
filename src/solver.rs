@@ -8,16 +8,14 @@ pub fn constant<T: ToBigUint>(x: T) -> Term<ALL> {
 }
 
 // TODO make generic
-fn script(variables: &[Term<ALL>], assertions: &[Term<ALL>]) -> Script<Term<ALL>> {
+fn script(variables: &[(Term<ALL>, ISort)], assertions: &[Term<ALL>]) -> Script<Term<ALL>> {
     let mut s = Script::new();
 
     // Variable declarations
-    s.extend(variables.into_iter().map(|t| match t {
+    s.extend(variables.iter().map(|(t, sort)| match t {
         Term::Variable(x) => Command::<Term>::DeclareConst {
             symbol: x.to_string().into(),
-
-            // TODO -- this needs to be more than just int
-            sort: ISort::int(),
+            sort: sort.clone(),
         },
         _ => todo!(),
     }));
@@ -29,7 +27,7 @@ fn script(variables: &[Term<ALL>], assertions: &[Term<ALL>]) -> Script<Term<ALL>
     s.extend(vec![
         Command::CheckSat,
         Command::GetValue {
-            terms: variables.to_vec(),
+            terms: variables.iter().map(|(t, ..)| t.clone()).collect(),
         },
         Command::Exit,
     ]);
@@ -56,7 +54,7 @@ impl TryFrom<Script<Term<ALL>>> for Solution {
 }
 
 impl Solution {
-    pub fn try_new(variables: &[Term<ALL>], assertions: &[Term<ALL>]) -> Result<Self, UnsatError> {
+    pub fn try_new(variables: &[(Term<ALL>, ISort)], assertions: &[Term<ALL>]) -> Result<Self, UnsatError> {
         let s = script(variables, assertions);
         return Self::try_from(s);
     }
