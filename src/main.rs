@@ -35,8 +35,8 @@ pub fn prob1() {
     )
     .unwrap();
 
-    println!("{:?}", s.get(&x));
-    println!("{:?}", s.get(&y));
+    println!("{}", s.get(&x).unwrap());
+    println!("{}", s.get(&y).unwrap());
 }
 
 pub fn unsat_prob() {

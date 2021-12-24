@@ -1,4 +1,6 @@
-use amzn_smt_ir::{logic::ALL, Command, Constant, IConst, ISort, ISymbol, Script, Term};
+use std::{ops::Deref, fmt::Display};
+
+use amzn_smt_ir::{logic::ALL, Command, Constant, IConst, ISort, ISymbol, Script, Term, Numeral, Decimal, Hexadecimal, Binary};
 use num::{self, bigint::ToBigUint};
 
 pub fn constant<T: ToBigUint>(x: T) -> Term<ALL> {
@@ -13,6 +15,8 @@ fn script(variables: &[Term<ALL>], assertions: &[Term<ALL>]) -> Script<Term<ALL>
     s.extend(variables.into_iter().map(|t| match t {
         Term::Variable(x) => Command::<Term>::DeclareConst {
             symbol: x.to_string().into(),
+
+            // TODO -- this needs to be more than just int
             sort: ISort::int(),
         },
         _ => todo!(),
@@ -57,13 +61,15 @@ impl Solution {
         return Self::try_from(s);
     }
 
-    pub fn get(&self, t: &Term) -> Option<&Term> {
+    pub fn get(&self, t: &Term) -> Option<Native> {
         match t {
             Term::Variable(x) => {
                 let sym: ISymbol = x.to_string().into();
 
                 // TODO -- why does it say b is a double reference
-                return self.bindings.iter().find(|b| b.0 == sym).map(|it| &it.1);
+                let found = &self.bindings.iter().find(|b| b.0 == sym)?.1;
+
+                return Some(Native::from(found));
             }
 
             _ => {
@@ -117,4 +123,44 @@ fn parse_term(smt: &str) -> Term {
     let s = Script::<Term>::parse(smt.as_bytes()).unwrap();
 
     return s.into_asserted_terms().next().unwrap();
+}
+
+// Right now we're just unpacking and re-packing. But I assume ultimately we will
+// want to wrap values from additional types in one native type variant.
+#[derive(Debug)]
+pub enum Native {
+    Numeral(Numeral),
+    Decimal(Decimal),
+    Hexadecimal(Hexadecimal),
+    Binary(Binary),
+    String(String),
+}
+
+impl Display for Native {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Native::Numeral(n) => { write!(f, "{}", n) },
+            Native::Decimal(n) => { write!(f, "{}", n) },
+            Native::Hexadecimal(_n) => { write!(f, "{}", "TODO") },
+            Native::Binary(_n) => { write!(f, "{}", "TODO") },
+            Native::String(n) => { write!(f, "{}", n) },
+        }
+    }
+}
+
+impl From<&Term> for Native {
+    fn from(t: &Term) -> Self {
+        match t {
+            Term::Constant(tt) => {
+                match tt.deref() {
+                    Constant::Numeral(n) => Native::Numeral(n.clone()),
+                    Constant::Decimal(n) => Native::Decimal(n.clone()),
+                    Constant::Hexadecimal(n) => Native::Hexadecimal(n.clone()),
+                    Constant::Binary(n) => Native::Binary(n.clone()),
+                    Constant::String(s) => Native::String(s.clone()),
+                }
+            }
+            _ => { panic!("{} {:?}", "Cannot convert non-term into native", t) }
+        }
+    }
 }
