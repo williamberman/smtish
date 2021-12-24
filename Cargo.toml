@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-amzn-smt-ir = { path = "./rust-smt-ir/amzn-smt-ir", version = "0.1" }
+amzn-smt-ir = { git = "https://github.com/awslabs/rust-smt-ir", version = "0.1", branch="main" }
 smt2parser = "0.6.1"
 smallvec = "1.6"
 num = "0.3.1"

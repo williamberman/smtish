@@ -1,0 +1,10 @@
+(declare-const x (_ BitVec 4))
+(declare-const y (_ BitVec 4))
+
+(assert (= (bvadd x y) #x4))
+
+(check-sat)
+
+(get-value (x y))
+
+(exit)

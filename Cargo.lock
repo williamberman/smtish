@@ -20,6 +20,7 @@ checksum = "739f4a8db6605981345c5654f3a85b056ce52f37a39d34da03f25bf2151ea16e"
 [[package]]
 name = "amzn-smt-ir"
 version = "0.1.0"
+source = "git+https://github.com/awslabs/rust-smt-ir?branch=main#551565ea5e97f502269d74d189e2e2c1e6b52f40"
 dependencies = [
  "amzn-smt-ir-derive",
  "either",
@@ -36,6 +37,7 @@ dependencies = [
 [[package]]
 name = "amzn-smt-ir-derive"
 version = "0.1.0"
+source = "git+https://github.com/awslabs/rust-smt-ir?branch=main#551565ea5e97f502269d74d189e2e2c1e6b52f40"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
