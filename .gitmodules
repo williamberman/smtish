@@ -1,0 +1,3 @@
+[submodule "rust-smt-ir"]
+	path = rust-smt-ir
+	url = https://github.com/awslabs/rust-smt-ir
