@@ -1,10 +1,18 @@
-use std::{ops::Deref, fmt::Display};
+use std::{fmt::Display, ops::Deref};
 
-use amzn_smt_ir::{logic::ALL, Command, Constant, IConst, ISort, ISymbol, Script, Term, Numeral, Decimal, Hexadecimal, Binary};
+use amzn_smt_ir::{
+    logic::ALL, Binary, Command, Constant, Decimal, Hexadecimal, IConst, ISort, ISymbol, Numeral,
+    Script, Term,
+};
 use num::{self, bigint::ToBigUint};
 
-pub fn constant<T: ToBigUint>(x: T) -> Term<ALL> {
+pub fn int_constant<T: ToBigUint>(x: T) -> Term<ALL> {
     return Term::Constant(IConst::from(Constant::Numeral(x.to_biguint().unwrap())));
+}
+
+// Note, Constant::Hexadecimal says it expects nibbles, but it's hungry enough you can feed it full bytes
+pub fn bv_constant(x: Hexadecimal) -> Term<ALL> {
+    return Term::Constant(IConst::from(Constant::Hexadecimal(x)));
 }
 
 // TODO make generic
@@ -54,7 +62,10 @@ impl TryFrom<Script<Term<ALL>>> for Solution {
 }
 
 impl Solution {
-    pub fn try_new(variables: &[(Term<ALL>, ISort)], assertions: &[Term<ALL>]) -> Result<Self, UnsatError> {
+    pub fn try_new(
+        variables: &[(Term<ALL>, ISort)],
+        assertions: &[Term<ALL>],
+    ) -> Result<Self, UnsatError> {
         let s = script(variables, assertions);
         return Self::try_from(s);
     }
@@ -78,6 +89,8 @@ impl Solution {
 }
 
 fn solve(s: Script<Term<ALL>>) -> Result<Vec<(ISymbol, Term)>, UnsatError> {
+    // TODO generate new filename every time.
+    // TODO system agnostic temp directory
     let filename = "/tmp/out.smtlib";
 
     std::fs::write(filename, s.to_string()).unwrap();
@@ -137,28 +150,68 @@ pub enum Native {
 impl Display for Native {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Native::Numeral(n) => { write!(f, "{}", n) },
-            Native::Decimal(n) => { write!(f, "{}", n) },
-            Native::Hexadecimal(_n) => { write!(f, "{}", "TODO") },
-            Native::Binary(_n) => { write!(f, "{}", "TODO") },
-            Native::String(n) => { write!(f, "{}", n) },
+            Native::Numeral(n) => {
+                write!(f, "{}", n)
+            }
+            Native::Decimal(n) => {
+                write!(f, "{}", n)
+            }
+            Native::Hexadecimal(n) => {
+                let mut h = hex::encode(nibbles_to_bytes(n));
+
+                if h.as_bytes()[0] == '0' as u8 {
+                    h.remove(0);
+                }
+
+                write!(f, "#x{}", h)
+            }
+            Native::Binary(_n) => {
+                write!(f, "{}", "TODO")
+            }
+            Native::String(n) => {
+                write!(f, "{}", n)
+            }
         }
     }
+}
+
+fn nibbles_to_bytes(n: &Vec<u8>) -> Vec<u8> {
+    let mut rv = vec![];
+
+    let mut i = n.len() - 1;
+
+    loop {
+        if i == 0 {
+            rv.push(n[i]);
+            break;
+        } else {
+            rv.push(16 * n[i - 1] + n[i]);
+            if i == 1 {
+                break;
+            } else {
+                i -= 2;
+            }
+        }
+    }
+
+    rv.reverse();
+
+    return rv;
 }
 
 impl From<&Term> for Native {
     fn from(t: &Term) -> Self {
         match t {
-            Term::Constant(tt) => {
-                match tt.deref() {
-                    Constant::Numeral(n) => Native::Numeral(n.clone()),
-                    Constant::Decimal(n) => Native::Decimal(n.clone()),
-                    Constant::Hexadecimal(n) => Native::Hexadecimal(n.clone()),
-                    Constant::Binary(n) => Native::Binary(n.clone()),
-                    Constant::String(s) => Native::String(s.clone()),
-                }
+            Term::Constant(tt) => match tt.deref() {
+                Constant::Numeral(n) => Native::Numeral(n.clone()),
+                Constant::Decimal(n) => Native::Decimal(n.clone()),
+                Constant::Hexadecimal(n) => Native::Hexadecimal(n.clone()),
+                Constant::Binary(n) => Native::Binary(n.clone()),
+                Constant::String(s) => Native::String(s.clone()),
+            },
+            _ => {
+                panic!("{} {:?}", "Cannot convert non-term into native", t)
             }
-            _ => { panic!("{} {:?}", "Cannot convert non-term into native", t) }
         }
     }
 }
